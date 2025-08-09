@@ -8,7 +8,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "${env.BRANCH_NAME == 'main' ? 'main:v1.0' : 'dev:v1.0'}"
         APP_PORT = "${env.BRANCH_NAME == 'main' ? '3000' : '3001'}"
-        CONTAINER_NAME = "${env.BRANCH_NAME == 'main' ? 'nodejsapp-main' : 'nodejsapp-dev'}"
+        CONTAINER_NAME = "${env.BRANCH_NAME == 'main' ? 'nodemain' : 'nodedev'}"
     }
     
     stages {
@@ -55,9 +55,9 @@ pipeline {
                     """
                     
                     if (env.BRANCH_NAME == 'main') {
-                        sh "docker run -d --name ${CONTAINER_NAME} -p 3000:3000 ${DOCKER_IMAGE}"
+                        sh "docker run -d --name ${CONTAINER_NAME} --expose 3000 -p 3000:3000 ${DOCKER_IMAGE}"
                     } else if (env.BRANCH_NAME == 'dev') {
-                        sh "docker run -d --name ${CONTAINER_NAME} -p 3001:3000 ${DOCKER_IMAGE}"
+                        sh "docker run -d --name ${CONTAINER_NAME} --expose 3001 -p 3001:3000 ${DOCKER_IMAGE}"
                     }
 
                     sleep(time: 10, unit: 'SECONDS')
