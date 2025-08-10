@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'TARGET_ENV', choices: ['main', 'dev'], description: 'Target environment to deploy')
+        string(name: 'DOCKER_TAG', defaultValue: 'v1.0', description: 'Docker image tag to deploy')
+    }
+
+    stages {
+        stage('Deploy Docker Container') {
+            steps {
+                script {
+                    def containerName = params.TARGET_ENV == 'main' ? "nodemain" : "nodedev"
+                    def appPort = params.TARGET_ENV == 'main' ? "3000" : "3001"
+                    def dockerImage = "${containerName}:${params.DOCKER_TAG}"
+
+                    echo "Deploying image ${dockerImage} to ${params.TARGET_ENV} environment on port ${appPort}"
+
+                    sh """
+                        docker stop ${containerName} || true
+                        docker rm ${containerName} || true
+                    """
+
+                    if (params.TARGET_ENV == 'main') {
+                        sh "docker run -d --name ${containerName} --expose 3000 -p 3000:3000 ${dockerImage}"
+                    } else {
+                        sh "docker run -d --name ${containerName} --expose 3001 -p 3001:3000 ${dockerImage}"
+                    }
+
+                    sleep(time: 10, unit: 'SECONDS')
+
+                    sh "docker ps | grep ${containerName}"
+                    echo "Application deployed at http://localhost:${appPort}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Manual deployment completed successfully!'
+        }
+        failure {
+            echo 'Manual deployment failed!'
+        }
+    }
+}
