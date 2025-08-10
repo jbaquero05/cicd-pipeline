@@ -11,19 +11,6 @@ pipeline {
         CONTAINER_NAME = "${env.BRANCH_NAME == 'main' ? 'nodemain' : 'nodedev'}"
     }
 
-    parameters {
-        choice(
-            name: 'TARGET_ENV',
-            choices: ['main', 'dev'],
-            description: 'Specify the target environment.'
-        )
-        string(
-            name: 'IMAGE_TAG',
-            defaultValue: 'latest',
-            description: 'Tag of the Docker image to deploy.'
-        )
-    }
-    
     stages {
         stage('Checkout SCM') {
             steps {
