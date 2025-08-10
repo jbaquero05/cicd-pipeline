@@ -4,13 +4,17 @@ pipeline {
     tools {
         nodejs "node"
     }
+
+    parameters {
+        string(name: 'DOCKER_TAG', defaultValue: 'v1.0', description: 'Docker image tag to use')
+    }
     
     environment {
-        DOCKER_IMAGE = "${env.BRANCH_NAME == 'main' ? 'main:v1.0' : 'dev:v1.0'}"
+        DOCKER_IMAGE = "${env.BRANCH_NAME == 'main' ? "main:${params.DOCKER_TAG ?: 'v1.0'}" : "dev:${params.DOCKER_TAG ?: 'v1.0'}"}"
         APP_PORT = "${env.BRANCH_NAME == 'main' ? '3000' : '3001'}"
         CONTAINER_NAME = "${env.BRANCH_NAME == 'main' ? 'nodemain' : 'nodedev'}"
     }
-
+    
     stages {
         stage('Checkout SCM') {
             steps {
