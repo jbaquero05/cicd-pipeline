@@ -2,19 +2,13 @@ pipeline {
     agent any
 
     tools {
-        nodejs "node"
+        nodejs "node" 
     }
 
     parameters {
         string(name: 'DOCKER_TAG', defaultValue: 'v1.0', description: 'Docker image tag to use')
     }
-    
-    environment {
-        DOCKER_IMAGE = "${env.BRANCH_NAME == 'main' ? "main:${params.DOCKER_TAG ?: 'v1.0'}" : "dev:${params.DOCKER_TAG ?: 'v1.0'}"}"
-        APP_PORT = "${env.BRANCH_NAME == 'main' ? '3000' : '3001'}"
-        CONTAINER_NAME = "${env.BRANCH_NAME == 'main' ? 'nodemain' : 'nodedev'}"
-    }
-    
+
     stages {
         stage('Checkout SCM') {
             steps {
@@ -22,57 +16,72 @@ pipeline {
                 checkout scm
             }
         }
-        
-        stage('Replace logo.svg & Build Application') {
+
+        stage('Replace logo.svg (dev only) & Build Application') {
             steps {
-                echo 'Replacing logo.svg'
-                sh 'rm -f src/logo.svg'
-                sh 'curl -sL "https://github.com/jbaquero05/image/blob/7bc83b8a93d8c200c7162b90f8df0939e93f8b03/EPAM.svg" -o src/logo.svg'
-                echo 'Building the application...'
+                script {
+                    if (env.BRANCH_NAME == 'dev') {
+                        def logoUrl = "https://github.com/jbaquero05/image/blob/7bc83b8a93d8c200c7162b90f8df0939e93f8b03/EPAM.svg"
+                        echo "Replacing logo.svg for branch ${env.BRANCH_NAME}"
+                        sh "rm -f src/logo.svg"
+                        sh "curl -sL '${logoUrl}' -o src/logo.svg"
+                    } else {
+                        echo "Preserving existing logo.svg for branch ${env.BRANCH_NAME}"
+                    }
+                }
+
+                echo 'Installing dependencies...'
                 sh 'npm install'
             }
         }
-        
+
         stage('Test Application') {
             steps {
                 echo 'Running tests...'
                 sh 'npm test'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image: ${DOCKER_IMAGE}"
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE} ."
+                    def imageName = env.BRANCH_NAME == 'main' ? "nodemain" : "nodedev"
+                    def fullTag = "${imageName}:${params.DOCKER_TAG ?: 'v1.0'}"
+                    env.DOCKER_IMAGE = fullTag
+                    echo "Building Docker image: ${fullTag}"
+                    sh "docker build -t ${fullTag} ."
                 }
             }
         }
-        
+
         stage('Deploy Application') {
             steps {
-                echo "Deploying to ${env.BRANCH_NAME} environment on port ${APP_PORT}"
                 script {
+                    def containerName = env.BRANCH_NAME == 'main' ? "nodemain" : "nodedev"
+                    def appPort = env.BRANCH_NAME == 'main' ? "3000" : "3001"
+
+                    echo "Deploying ${env.DOCKER_IMAGE} to ${env.BRANCH_NAME} environment on port ${appPort}"
+
                     sh """
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
+                        docker stop ${containerName} || true
+                        docker rm ${containerName} || true
                     """
-                    
+
                     if (env.BRANCH_NAME == 'main') {
-                        sh "docker run -d --name ${CONTAINER_NAME} --expose 3000 -p 3000:3000 ${DOCKER_IMAGE}"
-                    } else if (env.BRANCH_NAME == 'dev') {
-                        sh "docker run -d --name ${CONTAINER_NAME} --expose 3001 -p 3001:3000 ${DOCKER_IMAGE}"
+                        sh "docker run -d --name ${containerName} --expose 3000 -p 3000:3000 ${env.DOCKER_IMAGE}"
+                    } else {
+                        sh "docker run -d --name ${containerName} --expose 3001 -p 3001:3000 ${env.DOCKER_IMAGE}"
                     }
 
                     sleep(time: 10, unit: 'SECONDS')
-                    
-                    sh "docker ps | grep ${CONTAINER_NAME}"
-                    echo "Nodejs application successfully deployed at http://localhost:${APP_PORT}"
+
+                    sh "docker ps | grep ${containerName}"
+                    echo "Node.js application successfully deployed at http://localhost:${appPort}"
                 }
             }
         }
     }
-    
+
     post {
         success {
             echo 'Pipeline completed successfully!'
