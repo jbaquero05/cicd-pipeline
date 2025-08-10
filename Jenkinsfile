@@ -18,20 +18,21 @@ pipeline {
         }
 
         stage('Replace logo.svg (dev only) & Build Application') {
-            steps {
-                script {
-                    if (env.BRANCH_NAME == 'dev') {
-                        def logoUrl = "https://github.com/jbaquero05/image/blob/7bc83b8a93d8c200c7162b90f8df0939e93f8b03/EPAM.svg"
-                        echo "Replacing logo.svg for branch ${env.BRANCH_NAME}"
-                        sh "rm -f src/logo.svg"
-                        sh "curl -sL '${logoUrl}' -o src/logo.svg"
-                    } else {
-                        echo "Preserving existing logo.svg for branch ${env.BRANCH_NAME}"
-                    }
-                }
+    steps {
+        script {
+            if (env.BRANCH_NAME == 'dev') {
+                // Raw GitHub URL for direct download
+                def logoUrl = "https://raw.githubusercontent.com/jbaquero05/image/7bc83b8a93d8c200c7162b90f8df0939e93f8b03/EPAM.svg"
+                echo "Replacing logo.svg for branch ${env.BRANCH_NAME}"
+                sh "rm -f src/logo.svg"
+                sh "curl -sL '${logoUrl}' -o src/logo.svg"
+            } else {
+                echo "Preserving existing logo.svg for branch ${env.BRANCH_NAME}"
+            }
+        }
 
-                echo 'Installing dependencies...'
-                sh 'npm install'
+        echo 'Installing dependencies...'
+        sh 'npm install'
             }
         }
 
