@@ -21,7 +21,6 @@ pipeline {
     steps {
         script {
             if (env.BRANCH_NAME == 'dev') {
-                // Raw GitHub URL for direct download
                 def logoUrl = "https://raw.githubusercontent.com/jbaquero05/image/7bc83b8a93d8c200c7162b90f8df0939e93f8b03/EPAM.svg"
                 echo "Replacing logo.svg for branch ${env.BRANCH_NAME}"
                 sh "rm -f src/logo.svg"
